@@ -332,7 +332,7 @@ def podatki_comp_zone(ime_lokacije, odlozisce):
 
 
 def atoll_exporti():
-    subprocess.run(['cscript','C:\\Users\\planer02\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano.vbs'],  capture_output=True,  text=True)
+    subprocess.run(['cscript','D:\\Atoll_projects_planer01\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano.vbs'],  capture_output=True,  text=True)
     return 0
 
 def naredi_folder(folder, ime):
@@ -451,14 +451,14 @@ if __name__ == '__main__':
                         # xgcnr[['CELL_ID', 'TX_ID', 'ACTIVE', 'PCI','NRTAC','CID', 'CARRIER', 'SSS_POWER', 'MAX_POWER', 'PDCCH_POWER_OFFSET', 'PDSCH_POWER_OFFSET', 'CSIRS_POWER_OFFSET' ,'EQUIPMENT']].to_csv(odlozisce_novo + "26_xgcells5gnr.csv", index = False, sep = ";")
 
                     # if len(os.listdir(odlozisce_novo)) > 0:
-                        # subprocess.run(['cscript','C:\\Users\\planer02\\Skripte\\VBasic\\posodobi_atoll_3794_brez_archive.vbs'],  capture_output=True,  text=True)
+                        # subprocess.run(['cscript','D:\\Atoll_projects_planer01\\Skripte\\VBasic\\posodobi_atoll_3794_brez_archive.vbs'],  capture_output=True,  text=True)
                         # import arhiv_sprememb
                 # else:
                     # pass
 
                 podatki_celice(seznam_lokacij, odlozisce = "G:\\Avtomatika\\Eksport\\Planirane_celice\\Update_planirane_celice\\",nadomesca = namesto_lokacije[stev])
                 if zone == 'zone':
-                    subprocess.run(['cscript','C:\\Users\\planer02\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano_comp_zone.vbs'],  capture_output=True,  text=True)
+                    subprocess.run(['cscript','D:\\Atoll_projects_planer01\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano_comp_zone.vbs'],  capture_output=True,  text=True)
                     for i in seznam_lokacij:
                         podatki_comp_zone(i, odlozisce = r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\")
                         teh = pd.read_csv(r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\trans_teh.txt", sep = ";", names =  [0,1,2,3])
@@ -496,7 +496,7 @@ if __name__ == '__main__':
                                 dd.write(filter)
                                 dd.close()
                             krm_tab.to_excel("G:\\Avtomatika\\Eksport\\Export_coverage_krmilna_tabela.xlsx", index = False)
-                            # subprocess.run(['cscript','C:\\Users\\planer02\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano_nastavi_filt_zone.vbs'],  capture_output=True,  text=True)
+                            # subprocess.run(['cscript','D:\\Atoll_projects_planer01\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano_nastavi_filt_zone.vbs'],  capture_output=True,  text=True)
                             export_script_3794_reporting.export_pokrivanj_1(po_celicah = False, odlozisce_pokrivanja = r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" + teh[0][teh['teh'] == j].values[0] + "\\", krm_tab_set = True, ime_lokacije = teh[0][teh['teh'] == j].values[0], ime_fajla = ime_fajl,  ini_file_set = 'Ziga')
 
                         preverba_upravicenost_bazne_postaje.izracunaj_stevilke(mapa = r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\", lokacija = sitee)
@@ -508,7 +508,7 @@ if __name__ == '__main__':
                     with open (r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\trans_teh_filter.txt", "w") as dd:
                         dd.write(string_comp_zone)
                         dd.close()
-                    subprocess.run(['cscript','C:\\Users\\planer02\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano_nastavi_filt_zone.vbs'],  capture_output=True,  text=True)
+                    subprocess.run(['cscript','D:\\Atoll_projects_planer01\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano_nastavi_filt_zone.vbs'],  capture_output=True,  text=True)
                 else:
                     atoll_exporti('zone')
                     dodaj_ime_celice_v_export(r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\Export_planirane_celice\\")
