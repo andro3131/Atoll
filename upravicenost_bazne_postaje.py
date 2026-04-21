@@ -32,7 +32,7 @@ odlozisce_sosede_dodaj = "G:\\Avtomatika\\EPSG_3794\\Sosede\\Dodaj\\"
 odlozisce_sosede_brisi = "G:\\Avtomatika\\EPSG_3794\\Sosede\\Brisi\\"
 
 
-slovar__ = {'GSENGO':''}
+slovar__ = {'SCVEN':''}
 
 def format_(slovar):
     a = []
@@ -474,8 +474,8 @@ if __name__ == '__main__':
                         print(teh)
                         for j in teh['teh'].tolist():
                             sitee = teh[0][teh['teh'] == j].values[0]
-                            naredi_folder(r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" , teh[0][teh['teh'] == j].values[0])
-                            krm_tab = pd.read_excel(r"G:\Avtomatika\Eksport\\Export_coverage_krmilna_tabela.xlsx")
+                            naredi_folder(r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" , teh[0][teh['teh'] == j].values[0])
+                            krm_tab = pd.read_excel(r"D:\Atoll_projects_planer01\\Export_coverage_krmilna_tabela.xlsx")
                             krm_tab['Export_da_ne'] = False
                             if j.find("_") > 0:
                                 krm_tab.loc[(krm_tab['ime_fajla'] == j), 'Export_da_ne'] = True
@@ -495,11 +495,11 @@ if __name__ == '__main__':
                             with open (r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\trans_teh_filter.txt", "w") as dd:
                                 dd.write(filter)
                                 dd.close()
-                            krm_tab.to_excel("G:\\Avtomatika\\Eksport\\Export_coverage_krmilna_tabela.xlsx", index = False)
+                            krm_tab.to_excel("D:\\Atoll_projects_planer01\\Export_coverage_krmilna_tabela.xlsx", index = False)
                             # subprocess.run(['cscript','D:\\Atoll_projects_planer01\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano_nastavi_filt_zone.vbs'],  capture_output=True,  text=True)
-                            export_script_3794_reporting.export_pokrivanj_1(po_celicah = False, odlozisce_pokrivanja = r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" + teh[0][teh['teh'] == j].values[0] + "\\", krm_tab_set = True, ime_lokacije = teh[0][teh['teh'] == j].values[0], ime_fajla = ime_fajl,  ini_file_set = 'Ziga')
+                            export_script_3794_reporting.export_pokrivanj_1(po_celicah = False, odlozisce_pokrivanja = r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + teh[0][teh['teh'] == j].values[0] + "\\", krm_tab_set = True, ime_lokacije = teh[0][teh['teh'] == j].values[0], ime_fajla = ime_fajl,  ini_file_set = 'Ziga')
 
-                        preverba_upravicenost_bazne_postaje.izracunaj_stevilke(mapa = r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\", lokacija = sitee)
+                        preverba_upravicenost_bazne_postaje.izracunaj_stevilke(mapa = r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\", lokacija = sitee)
 
                     string_comp_zone = ""
                     with open (r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\" + 'zone.txt', "w") as dd:
@@ -513,21 +513,24 @@ if __name__ == '__main__':
                     atoll_exporti('zone')
                     dodaj_ime_celice_v_export(r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\Export_planirane_celice\\")
                 # Zipaj .txt fileje in jih zbrisi
-                file_list = [ii for ii in os.listdir(r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\") if ii.find("].txt") > 0]
+                file_list = [ii for ii in os.listdir(r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\") if ii.find("].txt") > 0]
                 if len(file_list) > 0:
-                    naredi_folder(r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" , sitee + "\\Atoll_export\\")
+                    naredi_folder(r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" , sitee + "\\Atoll_export\\")
                     for ii in file_list:
-                        shutil.move(r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\" + ii, r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\Atoll_export\\" + ii)
-                    shutil.make_archive(r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\" + sitee, 'zip', r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\Atoll_export\\")
+                        shutil.move(r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\" + ii, r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\Atoll_export\\" + ii)
+                    shutil.make_archive(r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\" + sitee, 'zip', r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\Atoll_export\\")
                     for ii in file_list:
-                        os.remove(r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\Atoll_export\\" + ii)
-                    shutil.rmtree(r"G:\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\Atoll_export\\")
+                        os.remove(r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\Atoll_export\\" + ii)
+                    shutil.rmtree(r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\Atoll_export\\")
                 stev = stev + 1
 
             else:
                 ni_slo_skozi.append(preverba_lokacije(seznam_lokacij)[5])
         except:
+            print("=== NAPAKA pri lokaciji ===")
+            print(traceback.format_exc())
             ni_slo_skozi.append(preverba_lokacije(seznam_lokacij)[5])
+
     print("================== KONEC ====================")
     print("Spodnje lokacije niso izračunane:\n")
     for i in ni_slo_skozi:
