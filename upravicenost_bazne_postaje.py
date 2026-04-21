@@ -8,6 +8,7 @@ import export_script_3794_reporting
 import os
 import preverba_upravicenost_bazne_postaje
 import zipfile
+import traceback
 import shutil
 from sql_denali_3794 import celice as celice_denali
 import csv_atoll_tabele
@@ -496,7 +497,7 @@ if __name__ == '__main__':
                                 dd.write(filter)
                                 dd.close()
                             krm_tab.to_excel("D:\\Atoll_projects_planer01\\Export_coverage_krmilna_tabela.xlsx", index = False)
-                            # subprocess.run(['cscript','D:\\Atoll_projects_planer01\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano_nastavi_filt_zone.vbs'],  capture_output=True,  text=True)
+                            subprocess.run(['cscript','D:\\Atoll_projects_planer01\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano_nastavi_filt_zone.vbs'],  capture_output=True,  text=True)
                             export_script_3794_reporting.export_pokrivanj_1(po_celicah = False, odlozisce_pokrivanja = r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + teh[0][teh['teh'] == j].values[0] + "\\", krm_tab_set = True, ime_lokacije = teh[0][teh['teh'] == j].values[0], ime_fajla = ime_fajl,  ini_file_set = 'Ziga')
 
                         preverba_upravicenost_bazne_postaje.izracunaj_stevilke(mapa = r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\", lokacija = sitee)
