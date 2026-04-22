@@ -43,7 +43,7 @@ Set objFs 			= WScript.CreateObject("Scripting.FileSystemObject")
 ' dat = objFs.GetAbsolutePathName("G:\Atoll_dokumenti\Dokument_exporti\Atoll_exporti_3912_2.ATL") 
 ' dat = objFs.GetAbsolutePathName("G:\Atoll_dokumenti\Dokument_exporti\Atoll_exporti_3794.ATL")
 ' dat = objFs.GetAbsolutePathName("G:\Atoll_dokumenti\Atoll_exporti_3794_test_atoll_3_5_1.ATL")
-dat = objFs.GetAbsolutePathName("G:\Atoll_dokumenti\Dokument_exporti\Atoll_exporti_3794_3_5_1.ATL")
+dat = objFs.GetAbsolutePathName("D:\Atoll_projects_planer01\Atoll_exporti_3794_3_5_1.ATL")
 
 
 
