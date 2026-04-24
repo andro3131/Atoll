@@ -25,7 +25,7 @@ po_celicah = False  # Za export planiranega stanja ali pa iz seznama celic. Celi
 
 t0 = time.time()
 
-odlozisce_2  = "G:\\Avtomatika\\Eksport\\export_zacasni_2.txt"
+odlozisce_2  = "D:\\Atoll_projects_planer01\\Avtomatika\\Eksport\\export_zacasni_2.txt"
 #ukaz = "C:\\PROGRA~1\\Forsk\\Add-ins\\SIGNAL~1\\signalsexport "    SPREMENJENO ANDREJ 13.4.2026
 ukaz = "C:\\PROGRA~1\\Forsk\\Add-ins\\SignalsExport\\signalsexport "
 at_dok_3794 = "D:\\Atoll_projects_planer01\\Atoll_exporti_3794_3_5_1.ATL"
@@ -34,7 +34,7 @@ mapa_ini_file = "C:\\PROGRA~1\\Forsk\\Add-ins\\SignalsExport\\"
 # odlozisce_reporting = r"G:\Pokrivanja\Odlozisce_reporting\\"
 # odlozisce_reporting = r"G:\Razno\Odlozisce_reporting_1_12_2023\\"
 mapa_krmilna_tabela = "D:\\Atoll_projects_planer01\\Export_coverage_krmilna_tabela.xlsx"
-celice_seznam = "G:\\Avtomatika\\Eksport\\Planirane_celice\\planirane_celice.csv"
+celice_seznam = "D:\\Atoll_projects_planer01\\Avtomatika\\Eksport\\Planirane_celice\\planirane_celice.csv"
 
 
 def glava(fr):

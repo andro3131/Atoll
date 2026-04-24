@@ -22,15 +22,15 @@ import csv_atoll_tabele
 #   2. Naredimo filter 20000m v vse smeri okoli iskane lokacije in naredimo exporte
 
 
-odlozisce_dnevnik = "G:\\Avtomatika\\EPSG_3794\\dnevnik.xlsx"
-odlozisce_dnevnik = "G:\\Avtomatika\\EPSG_3794\\Dnevnik\\"
-odlozisce_novo = "G:\\Avtomatika\\EPSG_3794\\Novo\\"
-odlozisce_spremeni = "G:\\Avtomatika\\EPSG_3794\\Spremeni\\"
-odlozisce_spremeni_atributi = "G:\\Avtomatika\\EPSG_3794\\Spremeni\\Atributi\\"
-odlozisce_brisi_drugo = "G:\\Avtomatika\\EPSG_3794\\Brisi_drugo\\"
-odlozisce_brisi = "G:\\Avtomatika\\EPSG_3794\\Brisi\\"
-odlozisce_sosede_dodaj = "G:\\Avtomatika\\EPSG_3794\\Sosede\\Dodaj\\"
-odlozisce_sosede_brisi = "G:\\Avtomatika\\EPSG_3794\\Sosede\\Brisi\\"
+odlozisce_dnevnik = "D:\\Atoll_projects_planer01\\Avtomatika\\EPSG_3794\\dnevnik.xlsx"
+odlozisce_dnevnik = "D:\\Atoll_projects_planer01\\Avtomatika\\EPSG_3794\\Dnevnik\\"
+odlozisce_novo = "D:\\Atoll_projects_planer01\\Avtomatika\\EPSG_3794\\Novo\\"
+odlozisce_spremeni = "D:\\Atoll_projects_planer01\\Avtomatika\\EPSG_3794\\Spremeni\\"
+odlozisce_spremeni_atributi = "D:\\Atoll_projects_planer01\\Avtomatika\\EPSG_3794\\Spremeni\\Atributi\\"
+odlozisce_brisi_drugo = "D:\\Atoll_projects_planer01\\Avtomatika\\EPSG_3794\\Brisi_drugo\\"
+odlozisce_brisi = "D:\\Atoll_projects_planer01\\Avtomatika\\EPSG_3794\\Brisi\\"
+odlozisce_sosede_dodaj = "D:\\Atoll_projects_planer01\\Avtomatika\\EPSG_3794\\Sosede\\Dodaj\\"
+odlozisce_sosede_brisi = "D:\\Atoll_projects_planer01\\Avtomatika\\EPSG_3794\\Sosede\\Brisi\\"
 
 
 slovar__ = {'SCVEN':''}
@@ -457,12 +457,12 @@ if __name__ == '__main__':
                 # else:
                     # pass
 
-                podatki_celice(seznam_lokacij, odlozisce = "G:\\Avtomatika\\Eksport\\Planirane_celice\\Update_planirane_celice\\",nadomesca = namesto_lokacije[stev])
+                podatki_celice(seznam_lokacij, odlozisce = "D:\\Atoll_projects_planer01\\Avtomatika\\Eksport\\Planirane_celice\\Update_planirane_celice\\",nadomesca = namesto_lokacije[stev])
                 if zone == 'zone':
                     subprocess.run(['cscript','D:\\Atoll_projects_planer01\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano_comp_zone.vbs'],  capture_output=True,  text=True)
                     for i in seznam_lokacij:
-                        podatki_comp_zone(i, odlozisce = r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\")
-                        teh = pd.read_csv(r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\trans_teh.txt", sep = ";", names =  [0,1,2,3])
+                        podatki_comp_zone(i, odlozisce = r"D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\")
+                        teh = pd.read_csv(r"D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\trans_teh.txt", sep = ";", names =  [0,1,2,3])
                         print(teh)
                         teh = teh[teh[0] == i]
                         teh['teh'] = teh[2].str.replace(" ","_")
@@ -493,7 +493,7 @@ if __name__ == '__main__':
                             print(filter)
                             print(ime_fajl)
                             print("=================")
-                            with open (r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\trans_teh_filter.txt", "w") as dd:
+                            with open (r"D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\trans_teh_filter.txt", "w") as dd:
                                 dd.write(filter)
                                 dd.close()
                             krm_tab.to_excel("D:\\Atoll_projects_planer01\\Export_coverage_krmilna_tabela.xlsx", index = False)
@@ -503,16 +503,16 @@ if __name__ == '__main__':
                         preverba_upravicenost_bazne_postaje.izracunaj_stevilke(mapa = r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\", lokacija = sitee)
 
                     string_comp_zone = ""
-                    with open (r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\" + 'zone.txt', "w") as dd:
+                    with open (r"D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\" + 'zone.txt', "w") as dd:
                         dd.write(string_comp_zone)
                         dd.close()
-                    with open (r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\trans_teh_filter.txt", "w") as dd:
+                    with open (r"D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\\trans_teh_filter.txt", "w") as dd:
                         dd.write(string_comp_zone)
                         dd.close()
                     subprocess.run(['cscript','D:\\Atoll_projects_planer01\\Skripte\\VBasic\\posodobi_atoll_3794_update_planirano_nastavi_filt_zone.vbs'],  capture_output=True,  text=True)
                 else:
                     atoll_exporti('zone')
-                    dodaj_ime_celice_v_export(r"G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\Export_planirane_celice\\")
+                    dodaj_ime_celice_v_export(r"D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\Export_planirane_celice\\")
                 # Zipaj .txt fileje in jih zbrisi
                 file_list = [ii for ii in os.listdir(r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" + sitee + "\\") if ii.find("].txt") > 0]
                 if len(file_list) > 0:

@@ -112,15 +112,15 @@ End If
 
 Set cs = objDocumentAtoll.GetRecords("coordsys", True)
 
-strPath_novo = "G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\Novo\"
-strPath_spremeni = "G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\Spremeni\"
-strPath_brisi = "G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\Brisi\"
-str_Path_filter1 = "G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\filter_sites.txt"
-str_Path_filter2 = "G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\filter_trans.txt"
-str_Path_filter3 = "G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\trans_teh.txt"
-str_Path_filter4 = "G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\zone.txt"
-str_Path_filter5 = "G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\trans_teh_filter.txt"
-odlozisce = "G:\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\Export_planirane_celice\"
+strPath_novo = "D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\Novo\"
+strPath_spremeni = "D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\Spremeni\"
+strPath_brisi = "D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\Brisi\"
+str_Path_filter1 = "D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\filter_sites.txt"
+str_Path_filter2 = "D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\filter_trans.txt"
+str_Path_filter3 = "D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\trans_teh.txt"
+str_Path_filter4 = "D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\zone.txt"
+str_Path_filter5 = "D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\trans_teh_filter.txt"
+odlozisce = "D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Update_planirane_celice\Export_planirane_celice\"
 
 
 Set objFso 			= WScript.CreateObject("Scripting.FileSystemObject")

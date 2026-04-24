@@ -33,8 +33,8 @@ if export_100 == True:
 
 t0 = time.time()
 
-odlozisce  = "G:\\Avtomatika\\Eksport\\export_zacasni.txt"
-odlozisce_2  = "G:\\Avtomatika\\Eksport\\export_zacasni_2.txt"
+odlozisce  = "D:\\Atoll_projects_planer01\\Avtomatika\\Eksport\\export_zacasni.txt"
+odlozisce_2  = "D:\\Atoll_projects_planer01\\Avtomatika\\Eksport\\export_zacasni_2.txt"
 #ukaz = "C:\\PROGRA~1\\Forsk\\Add-ins\\SIGNAL~1\\signalsexport "    SPREMENJENO ANDREJ 13.4.2026
 ukaz = "C:\\PROGRA~1\\Forsk\\Add-ins\\SignalsExport\\signalsexport "
 at_dok_3794 = "D:\\Atoll_projects_planer01\\Atoll_exporti_3794_3_5_1.ATL"
@@ -46,7 +46,7 @@ mapa_shrani_arcgis_3794 = "G:\\Pokrivanja\\Arcgis\\export_3794\\Tretjic\\"
 mapa_shrani_arcgis_3794 = "G:\\Pokrivanja\\Arcgis\\export_3794\\Petic\\"
 mapa_shrani_arcgis_3794 = "G:\\Pokrivanja\\Arcgis\\export_3794\\Sestic\\"
 
-# mapa_shrani_arcgis_3794 = r"G:\Avtomatika\Eksport\Planirane_celice\Export_planirane_celice\\"
+# mapa_shrani_arcgis_3794 = r"D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\Export_planirane_celice\\"
 
 mapa_shrani_arcgis_3794_100 = "G:\\Pokrivanja\\Arcgis\\export_3794_100m_6_best_servers\\"
 mapa_shrani_arcgis_3794_100 = "G:\\Pokrivanja\\Arcgis\\export_3794_100m_6_best_servers\\Drugic\\"
@@ -68,10 +68,10 @@ mapa_shrani_tomaz = "G:\\Pokrivanja\\Tomaz\\EPSG_3912\\Export\\"
 mapa_krmilna_tabela = "D:\\Atoll_projects_planer01\\Export_coverage_krmilna_tabela.xlsx"
 transfer_log = "G:\\Pokrivanja\\log\\transfer_log.txt"
 transfer_log_temp = "G:\\Pokrivanja\\log\\transfer_log_temp.txt"
-planirano_stanje = "G:\\Avtomatika\\Eksport\\planirane_celice_tabela.txt"
-celice_seznam = r"G:\Avtomatika\Eksport\Planirane_celice\\imena_lokacij_p2.csv"
+planirano_stanje = "D:\\Atoll_projects_planer01\\Avtomatika\\Eksport\\planirane_celice_tabela.txt"
+celice_seznam = r"D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\\imena_lokacij_p2.csv"
 nr700_original = r"G:\Pokrivanja\Arcgis\export_3794\Sestic\NR__700_original\\"
-# celice_seznam = r"G:\Avtomatika\Eksport\Planirane_celice\\imena_lokacij_p3.csv"
+# celice_seznam = r"D:\Atoll_projects_planer01\Avtomatika\Eksport\Planirane_celice\\imena_lokacij_p3.csv"
 
 
 def glava(fr):

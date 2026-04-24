@@ -43,7 +43,7 @@ Next
 		' End If
 ' Else
 
-str_Path_filter_2 = "G:\Avtomatika\Eksport\export_zacasni_2.txt"
+str_Path_filter_2 = "D:\Atoll_projects_planer01\Avtomatika\Eksport\export_zacasni_2.txt"
 Set objFSO = CreateObject("Scripting.FileSystemObject")
 Set f2 = objFSO.OpenTextFile(str_Path_filter_2,1)
 file2 = f2.ReadAll

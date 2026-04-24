@@ -25,10 +25,10 @@ import io
 import numpy as np
 
 folder_pokrivanja = r"G:\Pokrivanja\Arcgis\export_3794\Sestic\\"
-celice = "G:\\Avtomatika\\Eksport\\Celice_na_dan\\celice_na_dan.txt"
-odlozisce = r"G:\Avtomatika\Eksport\Celice_na_dan_atoll_export\\"
-odlozisce_raster = r"G:\Avtomatika\Eksport\Celice_na_dan_atoll_export\celice_ascii_atoll\\"
-odlozisce_shp = r"G:\Avtomatika\Eksport\Celice_na_dan_atoll_export\celice_shp_atoll\\"
+celice = "D:\\Atoll_projects_planer01\\Avtomatika\\Eksport\\Celice_na_dan\\celice_na_dan.txt"
+odlozisce = r"D:\Atoll_projects_planer01\Avtomatika\Eksport\Celice_na_dan_atoll_export\\"
+odlozisce_raster = r"D:\Atoll_projects_planer01\Avtomatika\Eksport\Celice_na_dan_atoll_export\celice_ascii_atoll\\"
+odlozisce_shp = r"D:\Atoll_projects_planer01\Avtomatika\Eksport\Celice_na_dan_atoll_export\celice_shp_atoll\\"
 sinr_to_bearer = r"G:\Pokrivanja\Stevci\\bearer_mapping_atoll.txt"
 bearer_coveri = r"G:\Pokrivanja\Stevci\\C_over_I_mapping_atoll.txt"
 
@@ -584,7 +584,7 @@ def second_best_cel_pri_best_server():
                     string = "(" + string[0:len(string)-1] +  ")"
                     print(string)
                     celice_df.loc[celice_df[0] == k, 'filter'] = string
-    return celice_df.to_csv("G:\\Avtomatika\\Eksport\\Celice_na_dan\\celice_na_dan_filter.txt", header = None, index = False, sep = ";")
+    return celice_df.to_csv("D:\\Atoll_projects_planer01\\Avtomatika\\Eksport\\Celice_na_dan\\celice_na_dan_filter.txt", header = None, index = False, sep = ";")
 
 def omejitev_best_server():
 
@@ -607,7 +607,7 @@ def omejitev_best_server():
                 niz = niz + string + "\n"
             else:
                 pass
-    with open("G:\\Avtomatika\\Eksport\\Celice_na_dan\\celice_na_dan_filter.txt", "w") as dd:
+    with open("D:\\Atoll_projects_planer01\\Avtomatika\\Eksport\\Celice_na_dan\\celice_na_dan_filter.txt", "w") as dd:
         dd.write(niz)
 
     return 0
