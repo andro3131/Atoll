@@ -104,7 +104,7 @@ Dim objProjection
 
 ' On Error Resume Next
 
-objDocumentAtoll.Refresh
+' objDocumentAtoll.Refresh   ' ZAKOMENTIRANO - povleci kolega's G:\ poti iz SQL archive nazaj v dokument
 If Err.Number <> 0 Then
   ' WScript.Echo "objDocumentAtoll.Refresh cisto na zacetku: " & Err.Description
   Err.Clear
@@ -220,7 +220,7 @@ End If
 	Do While objDocumentAtoll.HasRunningTask
 	WScript.Sleep 1000
 	Loop
-objDocumentAtoll.Refresh
+' objDocumentAtoll.Refresh   ' ZAKOMENTIRANO - povleci kolega's G:\ poti iz SQL archive nazaj v dokument
 If Err.Number <> 0 Then
 	Err.Clear
 End If

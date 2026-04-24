@@ -64,7 +64,7 @@ Set objDocumentAtoll = objAtoll.Documents.Open(dat)
 objAtoll.Visible 	= yes
 
 
-objDocumentAtoll.Refresh
+' objDocumentAtoll.Refresh   ' ZAKOMENTIRANO - povleci kolega's G:\ poti iz SQL archive nazaj v dokument
 
 
 If Err.Number <> 0 Then

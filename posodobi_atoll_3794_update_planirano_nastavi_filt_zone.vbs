@@ -181,7 +181,7 @@ End If
 	' gtrans.Filter = file5
 ' End If
 
-objDocumentAtoll.Refresh
+' objDocumentAtoll.Refresh   ' ZAKOMENTIRANO - povleci kolega's G:\ poti iz SQL archive nazaj v dokument
 objDocumentAtoll.Close 1
 If Err.Number <> 0 Then
   WScript.Echo "objDocumentAtoll.Quit konec dokumenta " & Err.Description

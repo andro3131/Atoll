@@ -53,7 +53,7 @@ Set objAtoll 	= GetObject("", "Atoll.Application")
 objAtoll.Visible 	= no 
 If file2 = ("(([RAT_]= LTE;NB-IoT) & ([FBAND]= n20 / E-UTRA 20 (800 MHz)))") OR (file2 = "(([RAT_]= LTE;NB-IoT) & ([FBAND]= n8 / E-UTRA 8 (900 MHz)))") OR (file2 = "(([RAT_]= LTE;NB-IoT) & ([FBAND]= n3 / E-UTRA 3 (1800 MHz)))" ) Then
 	Set objDocumentAtoll = objAtoll.Documents.Open(dat_nbiot)
-	objDocumentAtoll.Refresh
+	' objDocumentAtoll.Refresh   ' ZAKOMENTIRANO - povleci kolega's G:\ poti iz SQL archive nazaj v dokument
 Else
 	Set objDocumentAtoll = objAtoll.Documents.Open(dat)
 End If
