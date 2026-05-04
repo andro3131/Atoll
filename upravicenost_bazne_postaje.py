@@ -478,7 +478,6 @@ if __name__ == '__main__':
                         teh = teha
                         print(teh)
                         for j in teh['teh'].tolist():
-                            if j != 'LTE': continue   # TEST samo LTE - odstrani po preverbi!
                             sitee = teh[0][teh['teh'] == j].values[0]
                             naredi_folder(r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" , teh[0][teh['teh'] == j].values[0])
                             krm_tab = pd.read_excel(r"D:\Atoll_projects_planer01\\Export_coverage_krmilna_tabela.xlsx")
