@@ -254,8 +254,10 @@ def podatki_celice(ime_lokacije, odlozisce, nadomesca = []):
         os.remove(odlozisce + "Novo\\"  + i)
 
 
-    if len(manjkajoci_lte) > 0:
-        celice_lte = celice[['CELL_ID','TX_ID','ACTIVE','CARRIER','EQUIPMENT']][celice['TX_ID'].isin(manjkajoci_lte)].to_csv(odlozisce + "Novo\\" + "25_xgcellslte.csv", index = False, sep = ';', decimal = ',')
+    # Spremeni 23_xgtransmitters.csv - VEDNO zapise (ne samo ko manjkajo celice),
+    # da se ACTIVE=True zagotovo postavi tudi za planirane lokacije, katerih
+    # transmitterji so ze v ATL. Brez tega podrunhi ostanejo ACTIVE=False.
+    if ((celice['tehn'] == 'LTE') | (celice['tehn'] == '5G')).any():
         if len(nadomesca) > 0:
             celice_lte = celice[['TX_ID','ACTIVE']][((celice['tehn'] == 'LTE') | (celice['tehn'] == '5G'))]
             xgtr = pd.read_sql(query_xgtransmitters, conn_atoll)
@@ -265,9 +267,11 @@ def podatki_celice(ime_lokacije, odlozisce, nadomesca = []):
             celice_lte = pd.concat([celice_lte, xgtr])
             celice_lte.to_csv(odlozisce + "Spremeni\\" + "23_xgtransmitters.csv", index = False, sep = ';', decimal = ',')
         else:
-            celice_lte = celice[['TX_ID','ACTIVE']][((celice['tehn'] == 'LTE') | (celice['tehn'] == '5G'))].to_csv(odlozisce + "Spremeni\\" + "23_xgtransmitters.csv", index = False, sep = ';', decimal = ',')
-    else:
-        pass
+            celice[['TX_ID','ACTIVE']][((celice['tehn'] == 'LTE') | (celice['tehn'] == '5G'))].to_csv(odlozisce + "Spremeni\\" + "23_xgtransmitters.csv", index = False, sep = ';', decimal = ',')
+
+    # Novo - samo ce celice manjkajo v ATL
+    if len(manjkajoci_lte) > 0:
+        celice[['CELL_ID','TX_ID','ACTIVE','CARRIER','EQUIPMENT']][celice['TX_ID'].isin(manjkajoci_lte)].to_csv(odlozisce + "Novo\\" + "25_xgcellslte.csv", index = False, sep = ';', decimal = ',')
     if len(manjkajoci_nr) > 0:
         celice_nr = celice[['CELL_ID','TX_ID','ACTIVE','CARRIER','EQUIPMENT']][celice['TX_ID'].isin(manjkajoci_nr)].to_csv(odlozisce + "Novo\\" + "26_xgcells5gnr.csv", index = False, sep = ';', decimal = ',')
     else:
@@ -474,6 +478,7 @@ if __name__ == '__main__':
                         teh = teha
                         print(teh)
                         for j in teh['teh'].tolist():
+                            if j != 'LTE': continue   # TEST samo LTE - odstrani po preverbi!
                             sitee = teh[0][teh['teh'] == j].values[0]
                             naredi_folder(r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\\" , teh[0][teh['teh'] == j].values[0])
                             krm_tab = pd.read_excel(r"D:\Atoll_projects_planer01\\Export_coverage_krmilna_tabela.xlsx")
