@@ -19,6 +19,10 @@ import pyodbc
 import naredi_shp_za_112
 import sql_denali_3794
 import funkcije_at
+from shapely.geometry import Point
+import geopandas as gpd
+import df_to_tiff
+import manipulacija_slik
 
 conn_atoll = pyodbc.connect('Driver={SQL Server};'
                       'Server=BPW-DENALI;'
@@ -224,7 +228,15 @@ def odd_bp_od_naslov(lokacija):
         a=maximum
     return a
 
-def izracunaj_stevilke(mapa = '', lokacija = ''):
+def shape_tocke(df, odlozisce, ime_fajla):
+    gdf_points = gpd.GeoDataFrame(
+        df,
+        geometry=[Point(xy) for xy in zip(df["E"], df["N"])],
+        crs="EPSG:3794"
+    )
+    return gdf_points.to_file(odlozisce + ime_fajla, driver='ESRI Shapefile')
+
+def izracunaj_stevilke(mapa = '', lokacija = '', naredi_slike = False):
     tocke_df = pd.read_csv(tocke, sep = ";")
     tocke_df=  tocke_df[['E', 'N','HS_TID', 'HS_MID','PREB_STAL', 'PREB_ZAC','NASLOV', 'PRIKLJUCEK']]
     tocke_df['PREB_STAL'] = tocke_df['PREB_STAL'].fillna(0)
@@ -383,12 +395,30 @@ def izracunaj_stevilke(mapa = '', lokacija = ''):
         # presek.drop(columns = [0,1], inplace = True)
         # presek.rename(columns = {2:'2_vsi',3:'3_vsi'}, inplace = True)
 
+        presek__ = tocke_df.merge(lte800_df1, how = 'right', left_on = ['x_stot','y_stot'], right_on = [0,1])
+        presek__.drop(columns = [0,1], inplace = True)
+        presek__.rename(columns = {2:'2_prim',3:'3_prim'}, inplace = True)
+        presek__ = presek__.merge(lte800_df1_second, how = 'right', left_on = ['x_stot','y_stot'], right_on = [0,1])
+        presek__.drop(columns = [0,1], inplace = True)
+        presek__.rename(columns = {2:'2_ostali',3:'3_ostali'}, inplace = True)
+        presek__ = presek__.merge(lte800_dfa_sec, how = 'right', left_on = ['x_stot','y_stot'], right_on = [0,1])
+        presek__.drop(columns = [0,1], inplace = True)
+        presek__.rename(columns = {2:'2_sec',3:'3_sec'}, inplace = True)
+        presek__ = presek__.merge(lte800_dfa_second, how = 'right', left_on = ['x_stot','y_stot'], right_on = [0,1])
+        presek__.drop(columns = [0,1], inplace = True)
+        presek__.rename(columns = {2:'2_sec_ostali',3:'3_sec_ostali'}, inplace = True)
 
 
         presek['rangiranje'] = 0
         n = 0
         for m in nivoji:
             presek.loc[(presek['3_sec'] < n)&(presek['3_sec'] >= m), 'rangiranje'] = m
+            n = m
+
+        presek__['rangiranje'] = 0
+        n = 0
+        for m in nivoji:
+            presek__.loc[(presek__['3_sec'] < n)&(presek__['3_sec'] >= m), 'rangiranje'] = m
             n = m
 
         seznam = ['scenarij','celica','rangiranje','Naslovi_best','Prebivalci_best','Naslovi_best_indoor','Naslovi_best_outdoor',
@@ -425,8 +455,13 @@ def izracunaj_stevilke(mapa = '', lokacija = ''):
         presek2 = presek[col1]
         presek2 = presek2.dropna(subset = ['2_sec'], how = 'all')
 
-          
-        stevec2 = 0  
+        presek1__ = presek__[col]
+        presek1__ = presek1__.dropna(subset = ['2_prim'], how = 'all')
+        presek2__ = presek__[col1]
+        presek2__ = presek2__.dropna(subset = ['2_sec'], how = 'all')
+
+
+        stevec2 = 0
         for i in presek2['2_sec'].drop_duplicates().tolist():
             # presekk = presek2[presek2['2_sec'] == i]
             
@@ -520,9 +555,23 @@ def izracunaj_stevilke(mapa = '', lokacija = ''):
         temp.loc[stevec, 'Naslovi_second_optika'] = presek2['HS_MID'][(presek2['3_sec'] >= nivo_fwa) & (presek2['PRIKLJUCEK'] == 'OPTIKA')].drop_duplicates().shape[0]
         temp.loc[stevec, 'Naslovi_second_neoptika'] = presek2['HS_MID'][(presek2['3_sec'] >= nivo_fwa) & (presek2['PRIKLJUCEK'] != 'OPTIKA')].drop_duplicates().shape[0]
 
+        # Slikice
+        if (naredi_slike == True) & ((k.find('LTE') >= 0) | (k.find('NR') >=0)):
+            try:
+                os.mkdir(mapa + "Slike\\")
+            except:
+                pass
+            # 'Izboljsava_Naslovi_best_outdoor'
+            ime__ = lokacija + "_Izboljsava_Naslovi_best_outdoor_" + k.split("_")[1]
+            shape_tocke(df = presek1[['E','N']][(presek1['3_prim'] >= nivo_outdoor) & (presek1['3_prim'] > presek1['3_ostali'])].drop_duplicates(), odlozisce = mapa + "Slike\\", ime_fajla = ime__ + "_naslovi.shp")
+            df__ = presek1__[['x_stot',  'y_stot' ,  '2_prim' , '3_prim']][(presek1__['3_prim'] >= nivo_outdoor) & (presek1__['3_prim'] > presek1__['3_ostali'])].drop_duplicates()
+            df__.columns = [0,1,2,3]
+            df_to_tiff.naredi_tif1(file_pokrivanje = df__, odlozisce = mapa + "Slike\\", tip = 'df', resolution = 25, ime = ime__ , treshold = nivo_outdoor, x_offset = 12.5, y_offset = 12.5)
+            manipulacija_slik.transparent2(mapa = mapa + "Slike\\", slika = ime__ + ".tif", odlozisce = mapa + "Slike\\")
+            os.remove(mapa + "Slike\\" + ime__ + '.tif')
+            os.rename(mapa + "Slike\\" + ime__ + '__TRANSPARENT.tif', mapa + "Slike\\" + ime__ + '.tif')
 
-
-        stevec = stevec + 1        
+        stevec = stevec + 1
         temp_a = pd.concat([temp_a, temp])
 
     stolpci_koncno = ['scenarij',	'celica',	'Izboljsava_Naslovi_best',	'Izboljsava_Prebivalci_best',	'Novi_Naslovi_best_indoor',	'Novi_Prebivalci_best_indoor'	,'Novi_Naslovi_best_outdoor',	'Novi_Prebivalci_best_outdoor',	'Izboljsava_Naslovi_best_indoor'	,'Izboljsava_Prebivalci_best_indoor'	,'Izboljsava_Naslovi_best_outdoor'	,'Izboljsava_Prebivalci_best_outdoor'	,'Naslovi_best_FWA potencial','Naslovi_best_FWA_izboljsava','Izboljsava_Naslovi_second',	'Izboljsava_Prebivalci_second'	,'Izboljsava_Naslovi_second_indoor'	,'Novi_Naslovi_second_indoor'	,'Novi_Prebivalci_second_indoor'	,'Novi_Naslovi_second_outdoor',	'Novi_Prebivalci_second_outdoor'	,'Izboljsava_Prebivalci_second_indoor',	'Izboljsava_Naslovi_second_outdoor',	'Izboljsava_Prebivalci_second_outdoor',	'Naslovi_second_FWA_redundanca','Naslovi_second_FWA_izboljsava']
