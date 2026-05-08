@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from PIL import Image, ImageFilter, ImageDraw, ImageFont
 import numpy as np
-import scipy.misc
+try:
+    import scipy.misc  # odstranjen v scipy >= 1.12; modul ni nikjer uporabljen
+except ImportError:
+    pass
 from scipy import ndimage
 import matplotlib.pyplot as plt
 import os

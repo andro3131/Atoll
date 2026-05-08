@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import sys
+sys.path.append(r"D:\Atoll_projects_planer01\Skripte\Python\gis_zadeve")
+
 import funkcije_at
 import pyodbc
 import pandas as pd
