@@ -35,7 +35,15 @@ FIGSIZE = (10, 10)
 
 OVERLAY_ALPHA = 0.6       # transparenca raster overlay-a (0=nevidno, 1=neprozorno)
 POINTS_ALPHA = 1.0        # transparenca rdecih pik naslovov
-PERCENTILE_ZOOM = 95      # za zoom slike zanemarimo (100 - PERCENTILE_ZOOM)% najbolj oddaljenih naslovov od BP
+
+# Zoom slika: koliko % najblizjih naslovov ohranimo. Per-tech, ker imata LTE in NR
+# pogosto zelo razlicno razprseno pokrivanje.
+PERCENTILE_ZOOM = {
+    "LTE": 95,
+    "NR": 95,
+    # nizja stevilka = bolj agresivni crop (npr. 90 ali 85 za zelo razprsene primere)
+}
+PERCENTILE_ZOOM_DEFAULT = 95   # ce technologija ni v slovarju zgoraj
 
 # Izbira podlage. Lahko probamo razne, da vidimo kateri stil ustreza:
 BASEMAP_PROVIDER = ctx.providers.OpenTopoMap
@@ -72,9 +80,10 @@ def bp_koord(lokacija):
     return float(sites.iloc[0]['LONGITUDE']), float(sites.iloc[0]['LATITUDE'])
 
 
-def izracunaj_crop(tif_path, fallback_bp_coords):
+def izracunaj_crop_tif(tif_path, fallback_bp_coords):
     """
-    Vrne (xmin, ymin, xmax, ymax) v EPSG:3794 za izrez.
+    FALLBACK: vrne bounds iz TIF-a kadar SHP ni uporaben.
+    Vrne (xmin, ymin, xmax, ymax) v EPSG:3794.
     Logika:
       1. TIF cesto pokriva celoten computation zone (25km) s prozornimi pikami zunaj izboljsave.
          Zato iscemo bounding box VIDNIH pikslov (alpha > 0), ne src.bounds.
@@ -140,33 +149,38 @@ def izracunaj_crop(tif_path, fallback_bp_coords):
     return xmin - BUFFER_M, ymin - BUFFER_M, xmax + BUFFER_M, ymax + BUFFER_M
 
 
-def izracunaj_crop_zoom(shp_path, fallback_bp_coords, percentile=PERCENTILE_ZOOM):
+def izracunaj_crop_naslovi(shp_path, fallback_bp_coords, percentile=100):
     """
-    Vrne (xmin, ymin, xmax, ymax) za zoom slik. Bazirano na naslovih iz SHP.
-      1. Bere SHP, racuna razdalje od BP centra (ali centroida ce BP koord ni).
-      2. Odvrze (100-percentile)% najbolj oddaljenih.
-      3. Bounding box preostalih + kvadrat + buffer.
-    Vrne None ce SHP nima dovolj podatkov za smiseln zoom.
+    PRIMARNI crop: bounds iz SHP naslovov.
+      percentile=100  -> bounding box VSEH naslovov (uporaba za "vse" sliko)
+      percentile<100  -> odvrze (100-percentile)% najbolj oddaljenih (zoom slika)
+    Razdalje racunamo od BP centra (ali centroida, ce BP koord ni).
+    Vrne (xmin, ymin, xmax, ymax) ali None, ce SHP ni uporaben.
     """
     if not os.path.exists(shp_path):
         return None
     points = gpd.read_file(shp_path)
-    if points.empty or len(points) < 5:
+    if points.empty:
         return None
     if points.crs is None:
         points = points.set_crs("EPSG:3794")
     elif points.crs.to_string() != "EPSG:3794":
         points = points.to_crs("EPSG:3794")
 
-    if fallback_bp_coords:
-        cx, cy = fallback_bp_coords
+    if percentile < 100 and len(points) >= 2:
+        if fallback_bp_coords:
+            cx, cy = fallback_bp_coords
+        else:
+            cx = points.geometry.x.mean()
+            cy = points.geometry.y.mean()
+        dist = np.sqrt((points.geometry.x.values - cx) ** 2 + (points.geometry.y.values - cy) ** 2)
+        threshold = np.percentile(dist, percentile)
+        kept = points[dist <= threshold]
+        print(f"  CROP {percentile}%: odvrzemo {len(points) - len(kept)} od {len(points)} pik (max razdalja od BP: {threshold:.0f}m)")
     else:
-        cx = points.geometry.x.mean()
-        cy = points.geometry.y.mean()
+        kept = points
+        print(f"  CROP 100%: vseh {len(points)} pik")
 
-    dist = np.sqrt((points.geometry.x.values - cx) ** 2 + (points.geometry.y.values - cy) ** 2)
-    threshold = np.percentile(dist, percentile)
-    kept = points[dist <= threshold]
     if kept.empty:
         return None
 
@@ -174,8 +188,6 @@ def izracunaj_crop_zoom(shp_path, fallback_bp_coords, percentile=PERCENTILE_ZOOM
     xmax = float(kept.geometry.x.max())
     ymin = float(kept.geometry.y.min())
     ymax = float(kept.geometry.y.max())
-
-    print(f"  ZOOM ({percentile}% najblizjih): odvrzemo {len(points) - len(kept)} od {len(points)} pik, max razdalja od BP: {threshold:.0f}m")
 
     if SQUARE_CROP:
         dx = xmax - xmin
@@ -251,15 +263,19 @@ def main():
             print(f"PRESKOK: ne najdem {tif_path}")
             continue
 
-        # 1) Slika z vsemi tockami (loose, na TIF visible pixlih)
+        # 1) Slika z vsemi naslovi (loose, address-based, 100%)
         print(f"\n[{teh}] Generiram VSE: {output_path_vse}")
-        vse_bounds = izracunaj_crop(tif_path, bp_coords)
+        vse_bounds = izracunaj_crop_naslovi(shp_path, bp_coords, percentile=100)
+        if not vse_bounds:
+            print(f"  SHP ni uporaben, fallback na TIF visible pixle")
+            vse_bounds = izracunaj_crop_tif(tif_path, bp_coords)
         narisi_eno(tif_path, shp_path, output_path_vse, vse_bounds)
 
-        # 2) Zoom slika (drop 5% najbolj oddaljenih naslovov)
-        zoom_bounds = izracunaj_crop_zoom(shp_path, bp_coords)
+        # 2) Zoom slika (per-tech percentile)
+        p = PERCENTILE_ZOOM.get(teh, PERCENTILE_ZOOM_DEFAULT)
+        print(f"\n[{teh}] Generiram ZOOM (percentile={p}): {output_path_zoom}")
+        zoom_bounds = izracunaj_crop_naslovi(shp_path, bp_coords, percentile=p)
         if zoom_bounds:
-            print(f"\n[{teh}] Generiram ZOOM: {output_path_zoom}")
             narisi_eno(tif_path, shp_path, output_path_zoom, zoom_bounds)
         else:
             print(f"[{teh}] SHP nima dovolj podatkov za zoom variant, preskocim")
