@@ -1,18 +1,27 @@
 # -*- coding: utf-8 -*-
 r"""
-Test skripta za generiranje PNG slike pokrivanja iz obstojecih PANKAC TIF + SHP.
-Output: <SLIKE_DIR>\PANKAC_<TEH>_pokrivanje.png za vsako tehnologijo (LTE, NR).
+Splosna skripta za risanje PNG slik pokrivanja za poljubno BP.
+Predpostavlja, da je upravicenost analiza ze tekla in so v Slike\ mapi
+generirani TIF + SHP fajli (...Izboljsava_Naslovi_best_outdoor_<TEH>...).
 
-Po validaciji se ta logika preseli v preverba_upravicenost_bazne_postaje.py.
+Uporaba:
+  py -3.10 narisi_pokrivanje.py <LOKACIJA>
+  py -3.10 narisi_pokrivanje.py <LOK1> <LOK2> <LOK3> ...
 
-Run: py -3.10 test_narisi_pokrivanje.py
+Primeri:
+  py -3.10 narisi_pokrivanje.py PANKAC
+  py -3.10 narisi_pokrivanje.py KJROVT MCERSA SCVEN
+
+Za vsako lokacijo generira (ce so dostopni TIF+SHP):
+  <LOKACIJA>_<TEH>_pokrivanje.png         (vsi naslovi)
+  <LOKACIJA>_<TEH>_pokrivanje_zoom.png    (PERCENTILE_ZOOM% najblizjih)
 
 Predpogoji:
-  py -3.10 -m pip install contextily
-  (rasterio, geopandas, matplotlib, pyodbc - ze namesceni)
+  py -3.10 -m pip install contextily geopandas rasterio matplotlib pip-system-certs
 """
 
 import os
+import sys
 import numpy as np
 import pandas as pd
 import pyodbc
@@ -22,12 +31,11 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 
 # ============= Nastavitve =============
-LOKACIJA = "PANKAC"
-SLIKE_DIR = r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\PANKAC\Slike"
-TEHNOLOGIJE = ["LTE", "NR"]
+POKRIVANJA_BASE_DIR = r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje"
+TEHNOLOGIJE = ["LTE", "NR"]   # GSM nima slike (kolegov design)
 
 BUFFER_M = 500            # dodaten pas okrog autocrop bounding box
-MIN_RADIUS_M = 1000       # fallback radius okrog BP, ce TIF nima uporabnih bounds
+MIN_RADIUS_M = 1000       # fallback radius okrog BP, ce SHP/TIF nepouporabna
 SQUARE_CROP = True        # True = kvadratni izrez (boljse za slide); False = naravni AR
 
 DPI = 200
@@ -36,9 +44,8 @@ FIGSIZE = (10, 10)
 OVERLAY_ALPHA = 0.6       # transparenca raster overlay-a (0=nevidno, 1=neprozorno)
 POINTS_ALPHA = 0.8        # transparenca rdecih pik naslovov
 
-# Zoom slika: koliko % najblizjih naslovov ohranimo. Per-tech, ker imata LTE in NR
-# pogosto zelo razlicno razprseno pokrivanje. Na PANKAC se je izkazalo, da
-# je za LTE primernih 90, za NR pa 97 (NR pokrivanje je manj razprseno).
+# Zoom slika: koliko % najblizjih naslovov ohranimo. Per-tech.
+# LTE in NR imata pogosto zelo razlicno razprseno pokrivanje, zato locena nastavitev.
 PERCENTILE_ZOOM = {
     "LTE": 90,
     "NR": 97,
@@ -46,21 +53,20 @@ PERCENTILE_ZOOM = {
 }
 PERCENTILE_ZOOM_DEFAULT = 95   # ce technologija ni v slovarju zgoraj
 
-# Izbira podlage. Lahko probamo razne, da vidimo kateri stil ustreza:
 BASEMAP_PROVIDER = ctx.providers.OpenStreetMap.Mapnik
-# Alternative iz OSM/topo druzine:
-#   ctx.providers.OpenStreetMap.Mapnik       # klasicna OSM cestna karta
-#   ctx.providers.OpenStreetMap.HOT          # OSM Humanitarian - podoben Mapnik-u, vec poudarka na infrastrukturi
-#   ctx.providers.OpenStreetMap.DE           # OSM nemski stil - rahlo manj sumi
-#   ctx.providers.CyclOSM                    # kolesarska OSM razlicica - lepo izrisuje teren in poti
-#   ctx.providers.OpenTopoMap                # topografska s hill-shading in plastnicami (trenutni)
-#   ctx.providers.Esri.WorldTopoMap          # Esri topo - bolj klasicen kartografski stil
-#   ctx.providers.CartoDB.Voyager            # uravnotezena, bolj moderna
-#   ctx.providers.CartoDB.Positron           # zelo svetla, minimalisticna (verjetno preveč prazna za vas)
-#   ctx.providers.Esri.WorldImagery          # satelitska (drugacen feel)
-# Vsi so brezplacni in delujejo brez API kljuca.
+# Alternative iz OSM/topo druzine (vse brezplacne, brez API kljuca):
+#   ctx.providers.OpenStreetMap.Mapnik       # klasicna OSM cestna karta (trenutna)
+#   ctx.providers.OpenStreetMap.HOT          # OSM Humanitarian
+#   ctx.providers.OpenStreetMap.DE           # OSM nemski stil
+#   ctx.providers.CyclOSM                    # kolesarska OSM razlicica
+#   ctx.providers.OpenTopoMap                # topografska s hill-shading
+#   ctx.providers.Esri.WorldTopoMap          # Esri topo
+#   ctx.providers.CartoDB.Voyager            # bolj moderna
+#   ctx.providers.CartoDB.Positron           # zelo svetla, minimalisticna
+#   ctx.providers.Esri.WorldImagery          # satelitska
 
-# ============= SQL za fallback BP koord =============
+
+# ============= SQL za BP koord =============
 conn_atoll = pyodbc.connect(
     'Driver={SQL Server};'
     'Server=BPW-DENALI;'
@@ -71,7 +77,7 @@ conn_atoll = pyodbc.connect(
 
 
 def bp_koord(lokacija):
-    """Vrne (X, Y) v EPSG:3794, ali None ce ne najde."""
+    """Vrne (X, Y) v EPSG:3794, ali None ce BP ni v atoll_d96.sites."""
     sites = pd.read_sql(
         f"SELECT NAME, LONGITUDE, LATITUDE FROM atoll_d96.dbo.sites WHERE NAME='{lokacija}'",
         conn_atoll
@@ -82,50 +88,31 @@ def bp_koord(lokacija):
 
 
 def izracunaj_crop_tif(tif_path, fallback_bp_coords):
-    """
-    FALLBACK: vrne bounds iz TIF-a kadar SHP ni uporaben.
-    Vrne (xmin, ymin, xmax, ymax) v EPSG:3794.
-    Logika:
-      1. TIF cesto pokriva celoten computation zone (25km) s prozornimi pikami zunaj izboljsave.
-         Zato iscemo bounding box VIDNIH pikslov (alpha > 0), ne src.bounds.
-      2. Iz pixel coords izracunamo world coords preko transform-a.
-      3. Ce TIF nima vidnih pikslov, fallback na BP center +/- MIN_RADIUS_M.
-      4. Po izbiri kvadratiziramo (SQUARE_CROP).
-      5. Dodamo BUFFER_M na vse strani.
-    """
+    """FALLBACK: bounds iz TIF kadar SHP ni uporaben (visible alpha pixels)."""
     with rasterio.open(tif_path) as src:
-        img = src.read()        # (bands, h, w)
+        img = src.read()
         transform = src.transform
         full_bounds = src.bounds
 
-    # Najdi vidne piksle
-    if img.shape[0] == 4:       # RGBA - vidno = alpha > 0
+    if img.shape[0] == 4:
         visible_mask = img[3] > 0
-    elif img.shape[0] == 3:     # RGB brez alpha - predpostavimo, da je belo (255,255,255) ozadje
+    elif img.shape[0] == 3:
         visible_mask = ~((img[0] == 255) & (img[1] == 255) & (img[2] == 255))
-    else:                       # 1 band - vidno = ni 0/255
+    else:
         visible_mask = (img[0] > 0) & (img[0] < 255)
 
     if not visible_mask.any():
-        # prazen TIF
         empty = True
         xmin = ymin = xmax = ymax = 0
     else:
         rows, cols = np.where(visible_mask)
         min_col, max_col = int(cols.min()), int(cols.max())
         min_row, max_row = int(rows.min()), int(rows.max())
-        # transform * (col, row) -> (x, y) v world coords (zg. levi vogal pixla)
         x_tl, y_tl = transform * (min_col, min_row)
         x_br, y_br = transform * (max_col + 1, max_row + 1)
         xmin, xmax = min(x_tl, x_br), max(x_tl, x_br)
         ymin, ymax = min(y_tl, y_br), max(y_tl, y_br)
         empty = False
-
-    print(f"  TIF full bounds:    x=[{full_bounds.left:.0f}, {full_bounds.right:.0f}], y=[{full_bounds.bottom:.0f}, {full_bounds.top:.0f}]")
-    if not empty:
-        print(f"  TIF visible bounds: x=[{xmin:.0f}, {xmax:.0f}], y=[{ymin:.0f}, {ymax:.0f}]")
-    else:
-        print(f"  TIF nima vidnih pikslov - fallback na BP center")
 
     if empty or (xmax - xmin) < 100 or (ymax - ymin) < 100:
         if fallback_bp_coords:
@@ -153,10 +140,9 @@ def izracunaj_crop_tif(tif_path, fallback_bp_coords):
 def izracunaj_crop_naslovi(shp_path, fallback_bp_coords, percentile=100):
     """
     PRIMARNI crop: bounds iz SHP naslovov.
-      percentile=100  -> bounding box VSEH naslovov (uporaba za "vse" sliko)
-      percentile<100  -> odvrze (100-percentile)% najbolj oddaljenih (zoom slika)
-    Razdalje racunamo od BP centra (ali centroida, ce BP koord ni).
-    Vrne (xmin, ymin, xmax, ymax) ali None, ce SHP ni uporaben.
+      percentile=100  -> vsi naslovi
+      percentile<100  -> odvrze (100-percentile)% najbolj oddaljenih
+    Vrne None, ce SHP ni uporaben (klicec naj pade na izracunaj_crop_tif).
     """
     if not os.path.exists(shp_path):
         return None
@@ -211,10 +197,10 @@ def narisi_eno(tif_path, shp_path, output_path, bounds):
     ax.set_ylim(ymin, ymax)
     ax.set_aspect('equal')
 
-    # 1. Basemap - contextily prenese OSM/OpenTopo tile-e in jih reprojicira v nas CRS
+    # 1. Basemap
     ctx.add_basemap(ax, crs="EPSG:3794", source=BASEMAP_PROVIDER)
 
-    # 2. Naslovi (SHP) - rdece pike POD raster overlay (da niso v ospredju)
+    # 2. Naslovi (SHP) POD raster overlay
     if os.path.exists(shp_path):
         points = gpd.read_file(shp_path)
         if points.crs is None:
@@ -223,65 +209,114 @@ def narisi_eno(tif_path, shp_path, output_path, bounds):
             points = points.to_crs("EPSG:3794")
         points.plot(ax=ax, color='red', markersize=15, edgecolor='black', linewidth=0.5, zorder=2, alpha=POINTS_ALPHA)
 
-    # 3. Raster overlay (TIF z alpha kanalom iz transparent2) - VRH, polprozoren
+    # 3. Raster overlay (TIF z alpha kanalom)
     with rasterio.open(tif_path) as src:
         img = src.read()
         b = src.bounds
         ext = [b.left, b.right, b.bottom, b.top]
     if img.shape[0] >= 3:
-        img = img.transpose(1, 2, 0)   # (bands, h, w) -> (h, w, bands)
+        img = img.transpose(1, 2, 0)
     else:
         img = img[0]
     ax.imshow(img, extent=ext, origin='upper', interpolation='nearest', zorder=3, alpha=OVERLAY_ALPHA)
 
-    # Cista slika, brez osi, brez naslova, brez legende
     ax.set_axis_off()
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
     plt.savefig(output_path, dpi=DPI, bbox_inches='tight', pad_inches=0)
     plt.close(fig)
 
 
-def main():
-    bp_coords = bp_koord(LOKACIJA)
-    if bp_coords:
-        print(f"BP {LOKACIJA} koord (EPSG:3794): {bp_coords}")
-    else:
-        print(f"OPOZORILO: BP {LOKACIJA} ni v atoll_d96.sites - fallback brez centra")
+def preveri_lokacijo(lokacija):
+    """
+    Preveri, ce je za lokacijo na voljo izracun (Slike mapa + TIF/SHP fajli).
+    Vrne tuple (status, dict_pari) kjer:
+      status = 'ok' / 'manjka_mapa' / 'manjka_vse'
+      dict_pari = {teh: (tif_path, shp_path)} za tehnologije, kjer obstaja TIF
+    """
+    slike_dir = os.path.join(POKRIVANJA_BASE_DIR, lokacija, "Slike")
+    if not os.path.isdir(slike_dir):
+        return 'manjka_mapa', {}
 
+    pari = {}
     for teh in TEHNOLOGIJE:
-        tif_path = os.path.join(
-            SLIKE_DIR,
-            f"{LOKACIJA}_Izboljsava_Naslovi_best_outdoor_{teh}.tif"
-        )
-        shp_path = os.path.join(
-            SLIKE_DIR,
-            f"{LOKACIJA}_Izboljsava_Naslovi_best_outdoor_{teh}_naslovi.shp"
-        )
-        output_path_vse = os.path.join(SLIKE_DIR, f"{LOKACIJA}_{teh}_pokrivanje.png")
-        output_path_zoom = os.path.join(SLIKE_DIR, f"{LOKACIJA}_{teh}_pokrivanje_zoom.png")
+        tif_path = os.path.join(slike_dir, f"{lokacija}_Izboljsava_Naslovi_best_outdoor_{teh}.tif")
+        shp_path = os.path.join(slike_dir, f"{lokacija}_Izboljsava_Naslovi_best_outdoor_{teh}_naslovi.shp")
+        if os.path.exists(tif_path):
+            pari[teh] = (tif_path, shp_path)
 
-        if not os.path.exists(tif_path):
-            print(f"PRESKOK: ne najdem {tif_path}")
-            continue
+    if not pari:
+        return 'manjka_vse', {}
+    return 'ok', pari
 
-        # 1) Slika z vsemi naslovi (loose, address-based, 100%)
-        print(f"\n[{teh}] Generiram VSE: {output_path_vse}")
+
+def obdelaj_lokacijo(lokacija):
+    print(f"\n========== {lokacija} ==========")
+
+    status, pari = preveri_lokacijo(lokacija)
+    slike_dir = os.path.join(POKRIVANJA_BASE_DIR, lokacija, "Slike")
+
+    if status == 'manjka_mapa':
+        print(f"  NAPAKA: ne najdem mape {slike_dir}")
+        print(f"  Verjetno upravicenost analiza za {lokacija} se ni bila pognana.")
+        return False
+    if status == 'manjka_vse':
+        print(f"  NAPAKA: v {slike_dir} ne najdem nobenega TIF-a za {lokacija}")
+        print(f"  Upravicenost analiza je morda padla pri risanju slik.")
+        return False
+
+    bp_coords = bp_koord(lokacija)
+    if bp_coords:
+        print(f"  BP koord (EPSG:3794): {bp_coords}")
+    else:
+        print(f"  OPOZORILO: BP {lokacija} ni v atoll_d96.sites - uporabim centroid naslovov")
+
+    for teh, (tif_path, shp_path) in pari.items():
+        output_path_vse = os.path.join(slike_dir, f"{lokacija}_{teh}_pokrivanje.png")
+        output_path_zoom = os.path.join(slike_dir, f"{lokacija}_{teh}_pokrivanje_zoom.png")
+
+        # 1) Slika z vsemi naslovi (100%)
+        print(f"\n  [{teh}] Generiram VSE: {os.path.basename(output_path_vse)}")
         vse_bounds = izracunaj_crop_naslovi(shp_path, bp_coords, percentile=100)
         if not vse_bounds:
-            print(f"  SHP ni uporaben, fallback na TIF visible pixle")
+            print(f"    SHP ni uporaben, fallback na TIF visible pixle")
             vse_bounds = izracunaj_crop_tif(tif_path, bp_coords)
         narisi_eno(tif_path, shp_path, output_path_vse, vse_bounds)
 
         # 2) Zoom slika (per-tech percentile)
         p = PERCENTILE_ZOOM.get(teh, PERCENTILE_ZOOM_DEFAULT)
-        print(f"\n[{teh}] Generiram ZOOM (percentile={p}): {output_path_zoom}")
+        print(f"\n  [{teh}] Generiram ZOOM (percentile={p}): {os.path.basename(output_path_zoom)}")
         zoom_bounds = izracunaj_crop_naslovi(shp_path, bp_coords, percentile=p)
         if zoom_bounds:
             narisi_eno(tif_path, shp_path, output_path_zoom, zoom_bounds)
         else:
-            print(f"[{teh}] SHP nima dovolj podatkov za zoom variant, preskocim")
+            print(f"    SHP nima dovolj podatkov za zoom variant, preskocim")
 
-    print("Konec.")
+    return True
+
+
+def main():
+    if len(sys.argv) < 2:
+        print("Uporaba: py -3.10 narisi_pokrivanje.py <LOKACIJA> [<LOK2> <LOK3> ...]")
+        print("Primer:  py -3.10 narisi_pokrivanje.py PANKAC")
+        sys.exit(1)
+
+    lokacije = sys.argv[1:]
+    print(f"Bom obdelal {len(lokacije)} lokacij: {', '.join(lokacije)}")
+
+    uspeli = []
+    spodleteli = []
+    for lokacija in lokacije:
+        ok = obdelaj_lokacijo(lokacija)
+        if ok:
+            uspeli.append(lokacija)
+        else:
+            spodleteli.append(lokacija)
+
+    print("\n================= KONEC =================")
+    if uspeli:
+        print(f"Uspesno: {', '.join(uspeli)}")
+    if spodleteli:
+        print(f"Spodletelo: {', '.join(spodleteli)}")
 
 
 if __name__ == "__main__":
