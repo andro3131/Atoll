@@ -13,6 +13,7 @@ Predpogoji:
 """
 
 import os
+import numpy as np
 import pandas as pd
 import pyodbc
 import rasterio
@@ -66,21 +67,53 @@ def izracunaj_crop(tif_path, fallback_bp_coords):
     """
     Vrne (xmin, ymin, xmax, ymax) v EPSG:3794 za izrez.
     Logika:
-      1. Bounds beremo direktno iz TIF (kolegov naredi_tif1 jih tightly croppa na izboljsavo).
-      2. Ce so bounds degenerirani (< 100m), fallback na BP center +/- MIN_RADIUS_M.
-      3. Po izbiri kvadratiziramo (SQUARE_CROP).
-      4. Dodamo BUFFER_M na vse strani.
+      1. TIF cesto pokriva celoten computation zone (25km) s prozornimi pikami zunaj izboljsave.
+         Zato iscemo bounding box VIDNIH pikslov (alpha > 0), ne src.bounds.
+      2. Iz pixel coords izracunamo world coords preko transform-a.
+      3. Ce TIF nima vidnih pikslov, fallback na BP center +/- MIN_RADIUS_M.
+      4. Po izbiri kvadratiziramo (SQUARE_CROP).
+      5. Dodamo BUFFER_M na vse strani.
     """
     with rasterio.open(tif_path) as src:
-        b = src.bounds
-        xmin, ymin, xmax, ymax = b.left, b.bottom, b.right, b.top
+        img = src.read()        # (bands, h, w)
+        transform = src.transform
+        full_bounds = src.bounds
 
-    if (xmax - xmin) < 100 or (ymax - ymin) < 100:
+    # Najdi vidne piksle
+    if img.shape[0] == 4:       # RGBA - vidno = alpha > 0
+        visible_mask = img[3] > 0
+    elif img.shape[0] == 3:     # RGB brez alpha - predpostavimo, da je belo (255,255,255) ozadje
+        visible_mask = ~((img[0] == 255) & (img[1] == 255) & (img[2] == 255))
+    else:                       # 1 band - vidno = ni 0/255
+        visible_mask = (img[0] > 0) & (img[0] < 255)
+
+    if not visible_mask.any():
+        # prazen TIF
+        empty = True
+        xmin = ymin = xmax = ymax = 0
+    else:
+        rows, cols = np.where(visible_mask)
+        min_col, max_col = int(cols.min()), int(cols.max())
+        min_row, max_row = int(rows.min()), int(rows.max())
+        # transform * (col, row) -> (x, y) v world coords (zg. levi vogal pixla)
+        x_tl, y_tl = transform * (min_col, min_row)
+        x_br, y_br = transform * (max_col + 1, max_row + 1)
+        xmin, xmax = min(x_tl, x_br), max(x_tl, x_br)
+        ymin, ymax = min(y_tl, y_br), max(y_tl, y_br)
+        empty = False
+
+    print(f"  TIF full bounds:    x=[{full_bounds.left:.0f}, {full_bounds.right:.0f}], y=[{full_bounds.bottom:.0f}, {full_bounds.top:.0f}]")
+    if not empty:
+        print(f"  TIF visible bounds: x=[{xmin:.0f}, {xmax:.0f}], y=[{ymin:.0f}, {ymax:.0f}]")
+    else:
+        print(f"  TIF nima vidnih pikslov - fallback na BP center")
+
+    if empty or (xmax - xmin) < 100 or (ymax - ymin) < 100:
         if fallback_bp_coords:
             cx, cy = fallback_bp_coords
         else:
-            cx = (xmin + xmax) / 2
-            cy = (ymin + ymax) / 2
+            cx = (full_bounds.left + full_bounds.right) / 2
+            cy = (full_bounds.bottom + full_bounds.top) / 2
         xmin = cx - MIN_RADIUS_M
         xmax = cx + MIN_RADIUS_M
         ymin = cy - MIN_RADIUS_M
@@ -100,7 +133,7 @@ def izracunaj_crop(tif_path, fallback_bp_coords):
 
 def narisi_eno(tif_path, shp_path, output_path, bp_coords):
     xmin, ymin, xmax, ymax = izracunaj_crop(tif_path, bp_coords)
-    print(f"  bounds (EPSG:3794): x=[{xmin:.0f}, {xmax:.0f}], y=[{ymin:.0f}, {ymax:.0f}]")
+    print(f"  KONCNI izrez (z bufferjem {BUFFER_M}m): x=[{xmin:.0f}, {xmax:.0f}], y=[{ymin:.0f}, {ymax:.0f}]  ({(xmax-xmin)/1000:.1f}km x {(ymax-ymin)/1000:.1f}km)")
 
     fig, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
     ax.set_xlim(xmin, xmax)
