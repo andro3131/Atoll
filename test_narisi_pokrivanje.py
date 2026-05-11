@@ -39,12 +39,17 @@ PERCENTILE_ZOOM = 95      # za zoom slike zanemarimo (100 - PERCENTILE_ZOOM)% na
 
 # Izbira podlage. Lahko probamo razne, da vidimo kateri stil ustreza:
 BASEMAP_PROVIDER = ctx.providers.OpenTopoMap
-# Alternative:
-#   ctx.providers.OpenStreetMap.Mapnik       # cestna karta (klasicni OSM)
-#   ctx.providers.CartoDB.Positron           # svetla, minimalisticna
-#   ctx.providers.Esri.WorldTopoMap          # Esri topo
-#   ctx.providers.Esri.WorldImagery          # satelitska
-#   ctx.providers.CartoDB.Voyager            # uravnotezena
+# Alternative iz OSM/topo druzine:
+#   ctx.providers.OpenStreetMap.Mapnik       # klasicna OSM cestna karta
+#   ctx.providers.OpenStreetMap.HOT          # OSM Humanitarian - podoben Mapnik-u, vec poudarka na infrastrukturi
+#   ctx.providers.OpenStreetMap.DE           # OSM nemski stil - rahlo manj sumi
+#   ctx.providers.CyclOSM                    # kolesarska OSM razlicica - lepo izrisuje teren in poti
+#   ctx.providers.OpenTopoMap                # topografska s hill-shading in plastnicami (trenutni)
+#   ctx.providers.Esri.WorldTopoMap          # Esri topo - bolj klasicen kartografski stil
+#   ctx.providers.CartoDB.Voyager            # uravnotezena, bolj moderna
+#   ctx.providers.CartoDB.Positron           # zelo svetla, minimalisticna (verjetno preveč prazna za vas)
+#   ctx.providers.Esri.WorldImagery          # satelitska (drugacen feel)
+# Vsi so brezplacni in delujejo brez API kljuca.
 
 # ============= SQL za fallback BP koord =============
 conn_atoll = pyodbc.connect(
