@@ -35,6 +35,7 @@ FIGSIZE = (10, 10)
 
 OVERLAY_ALPHA = 0.6       # transparenca raster overlay-a (0=nevidno, 1=neprozorno)
 POINTS_ALPHA = 1.0        # transparenca rdecih pik naslovov
+PERCENTILE_ZOOM = 95      # za zoom slike zanemarimo (100 - PERCENTILE_ZOOM)% najbolj oddaljenih naslovov od BP
 
 # Izbira podlage. Lahko probamo razne, da vidimo kateri stil ustreza:
 BASEMAP_PROVIDER = ctx.providers.OpenTopoMap
@@ -134,8 +135,57 @@ def izracunaj_crop(tif_path, fallback_bp_coords):
     return xmin - BUFFER_M, ymin - BUFFER_M, xmax + BUFFER_M, ymax + BUFFER_M
 
 
-def narisi_eno(tif_path, shp_path, output_path, bp_coords):
-    xmin, ymin, xmax, ymax = izracunaj_crop(tif_path, bp_coords)
+def izracunaj_crop_zoom(shp_path, fallback_bp_coords, percentile=PERCENTILE_ZOOM):
+    """
+    Vrne (xmin, ymin, xmax, ymax) za zoom slik. Bazirano na naslovih iz SHP.
+      1. Bere SHP, racuna razdalje od BP centra (ali centroida ce BP koord ni).
+      2. Odvrze (100-percentile)% najbolj oddaljenih.
+      3. Bounding box preostalih + kvadrat + buffer.
+    Vrne None ce SHP nima dovolj podatkov za smiseln zoom.
+    """
+    if not os.path.exists(shp_path):
+        return None
+    points = gpd.read_file(shp_path)
+    if points.empty or len(points) < 5:
+        return None
+    if points.crs is None:
+        points = points.set_crs("EPSG:3794")
+    elif points.crs.to_string() != "EPSG:3794":
+        points = points.to_crs("EPSG:3794")
+
+    if fallback_bp_coords:
+        cx, cy = fallback_bp_coords
+    else:
+        cx = points.geometry.x.mean()
+        cy = points.geometry.y.mean()
+
+    dist = np.sqrt((points.geometry.x.values - cx) ** 2 + (points.geometry.y.values - cy) ** 2)
+    threshold = np.percentile(dist, percentile)
+    kept = points[dist <= threshold]
+    if kept.empty:
+        return None
+
+    xmin = float(kept.geometry.x.min())
+    xmax = float(kept.geometry.x.max())
+    ymin = float(kept.geometry.y.min())
+    ymax = float(kept.geometry.y.max())
+
+    print(f"  ZOOM ({percentile}% najblizjih): odvrzemo {len(points) - len(kept)} od {len(points)} pik, max razdalja od BP: {threshold:.0f}m")
+
+    if SQUARE_CROP:
+        dx = xmax - xmin
+        dy = ymax - ymin
+        d = max(dx, dy) / 2
+        cx_box = (xmin + xmax) / 2
+        cy_box = (ymin + ymax) / 2
+        xmin, xmax = cx_box - d, cx_box + d
+        ymin, ymax = cy_box - d, cy_box + d
+
+    return xmin - BUFFER_M, ymin - BUFFER_M, xmax + BUFFER_M, ymax + BUFFER_M
+
+
+def narisi_eno(tif_path, shp_path, output_path, bounds):
+    xmin, ymin, xmax, ymax = bounds
     print(f"  KONCNI izrez (z bufferjem {BUFFER_M}m): x=[{xmin:.0f}, {xmax:.0f}], y=[{ymin:.0f}, {ymax:.0f}]  ({(xmax-xmin)/1000:.1f}km x {(ymax-ymin)/1000:.1f}km)")
 
     fig, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
@@ -146,7 +196,16 @@ def narisi_eno(tif_path, shp_path, output_path, bp_coords):
     # 1. Basemap - contextily prenese OSM/OpenTopo tile-e in jih reprojicira v nas CRS
     ctx.add_basemap(ax, crs="EPSG:3794", source=BASEMAP_PROVIDER)
 
-    # 2. Raster overlay (TIF z alpha kanalom iz transparent2)
+    # 2. Naslovi (SHP) - rdece pike POD raster overlay (da niso v ospredju)
+    if os.path.exists(shp_path):
+        points = gpd.read_file(shp_path)
+        if points.crs is None:
+            points = points.set_crs("EPSG:3794")
+        elif points.crs.to_string() != "EPSG:3794":
+            points = points.to_crs("EPSG:3794")
+        points.plot(ax=ax, color='red', markersize=15, edgecolor='black', linewidth=0.5, zorder=2, alpha=POINTS_ALPHA)
+
+    # 3. Raster overlay (TIF z alpha kanalom iz transparent2) - VRH, polprozoren
     with rasterio.open(tif_path) as src:
         img = src.read()
         b = src.bounds
@@ -155,16 +214,7 @@ def narisi_eno(tif_path, shp_path, output_path, bp_coords):
         img = img.transpose(1, 2, 0)   # (bands, h, w) -> (h, w, bands)
     else:
         img = img[0]
-    ax.imshow(img, extent=ext, origin='upper', interpolation='nearest', zorder=2, alpha=OVERLAY_ALPHA)
-
-    # 3. Naslovi (SHP) - rdece pike
-    if os.path.exists(shp_path):
-        points = gpd.read_file(shp_path)
-        if points.crs is None:
-            points = points.set_crs("EPSG:3794")
-        elif points.crs.to_string() != "EPSG:3794":
-            points = points.to_crs("EPSG:3794")
-        points.plot(ax=ax, color='red', markersize=15, edgecolor='black', linewidth=0.5, zorder=3, alpha=POINTS_ALPHA)
+    ax.imshow(img, extent=ext, origin='upper', interpolation='nearest', zorder=3, alpha=OVERLAY_ALPHA)
 
     # Cista slika, brez osi, brez naslova, brez legende
     ax.set_axis_off()
@@ -189,13 +239,25 @@ def main():
             SLIKE_DIR,
             f"{LOKACIJA}_Izboljsava_Naslovi_best_outdoor_{teh}_naslovi.shp"
         )
-        output_path = os.path.join(SLIKE_DIR, f"{LOKACIJA}_{teh}_pokrivanje.png")
+        output_path_vse = os.path.join(SLIKE_DIR, f"{LOKACIJA}_{teh}_pokrivanje.png")
+        output_path_zoom = os.path.join(SLIKE_DIR, f"{LOKACIJA}_{teh}_pokrivanje_zoom.png")
 
         if not os.path.exists(tif_path):
             print(f"PRESKOK: ne najdem {tif_path}")
             continue
-        print(f"Generiram: {output_path}")
-        narisi_eno(tif_path, shp_path, output_path, bp_coords)
+
+        # 1) Slika z vsemi tockami (loose, na TIF visible pixlih)
+        print(f"\n[{teh}] Generiram VSE: {output_path_vse}")
+        vse_bounds = izracunaj_crop(tif_path, bp_coords)
+        narisi_eno(tif_path, shp_path, output_path_vse, vse_bounds)
+
+        # 2) Zoom slika (drop 5% najbolj oddaljenih naslovov)
+        zoom_bounds = izracunaj_crop_zoom(shp_path, bp_coords)
+        if zoom_bounds:
+            print(f"\n[{teh}] Generiram ZOOM: {output_path_zoom}")
+            narisi_eno(tif_path, shp_path, output_path_zoom, zoom_bounds)
+        else:
+            print(f"[{teh}] SHP nima dovolj podatkov za zoom variant, preskocim")
 
     print("Konec.")
 
