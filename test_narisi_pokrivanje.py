@@ -33,6 +33,9 @@ SQUARE_CROP = True        # True = kvadratni izrez (boljse za slide); False = na
 DPI = 200
 FIGSIZE = (10, 10)
 
+OVERLAY_ALPHA = 0.6       # transparenca raster overlay-a (0=nevidno, 1=neprozorno)
+POINTS_ALPHA = 1.0        # transparenca rdecih pik naslovov
+
 # Izbira podlage. Lahko probamo razne, da vidimo kateri stil ustreza:
 BASEMAP_PROVIDER = ctx.providers.OpenTopoMap
 # Alternative:
@@ -152,7 +155,7 @@ def narisi_eno(tif_path, shp_path, output_path, bp_coords):
         img = img.transpose(1, 2, 0)   # (bands, h, w) -> (h, w, bands)
     else:
         img = img[0]
-    ax.imshow(img, extent=ext, origin='upper', interpolation='nearest', zorder=2)
+    ax.imshow(img, extent=ext, origin='upper', interpolation='nearest', zorder=2, alpha=OVERLAY_ALPHA)
 
     # 3. Naslovi (SHP) - rdece pike
     if os.path.exists(shp_path):
@@ -161,7 +164,7 @@ def narisi_eno(tif_path, shp_path, output_path, bp_coords):
             points = points.set_crs("EPSG:3794")
         elif points.crs.to_string() != "EPSG:3794":
             points = points.to_crs("EPSG:3794")
-        points.plot(ax=ax, color='red', markersize=15, edgecolor='black', linewidth=0.5, zorder=3)
+        points.plot(ax=ax, color='red', markersize=15, edgecolor='black', linewidth=0.5, zorder=3, alpha=POINTS_ALPHA)
 
     # Cista slika, brez osi, brez naslova, brez legende
     ax.set_axis_off()
