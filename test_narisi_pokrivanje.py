@@ -1,0 +1,168 @@
+# -*- coding: utf-8 -*-
+r"""
+Test skripta za generiranje PNG slike pokrivanja iz obstojecih PANKAC TIF + SHP.
+Output: <SLIKE_DIR>\PANKAC_<TEH>_pokrivanje.png za vsako tehnologijo (LTE, NR).
+
+Po validaciji se ta logika preseli v preverba_upravicenost_bazne_postaje.py.
+
+Run: py -3.10 test_narisi_pokrivanje.py
+
+Predpogoji:
+  py -3.10 -m pip install contextily
+  (rasterio, geopandas, matplotlib, pyodbc - ze namesceni)
+"""
+
+import os
+import pandas as pd
+import pyodbc
+import rasterio
+import contextily as ctx
+import geopandas as gpd
+import matplotlib.pyplot as plt
+
+# ============= Nastavitve =============
+LOKACIJA = "PANKAC"
+SLIKE_DIR = r"D:\Atoll_projects_planer01\Pokrivanja\Upravicenost_bazne_postaje\PANKAC\Slike"
+TEHNOLOGIJE = ["LTE", "NR"]
+
+BUFFER_M = 500            # dodaten pas okrog autocrop bounding box
+MIN_RADIUS_M = 1000       # fallback radius okrog BP, ce TIF nima uporabnih bounds
+SQUARE_CROP = True        # True = kvadratni izrez (boljse za slide); False = naravni AR
+
+DPI = 200
+FIGSIZE = (10, 10)
+
+# Izbira podlage. Lahko probamo razne, da vidimo kateri stil ustreza:
+BASEMAP_PROVIDER = ctx.providers.OpenTopoMap
+# Alternative:
+#   ctx.providers.OpenStreetMap.Mapnik       # cestna karta (klasicni OSM)
+#   ctx.providers.CartoDB.Positron           # svetla, minimalisticna
+#   ctx.providers.Esri.WorldTopoMap          # Esri topo
+#   ctx.providers.Esri.WorldImagery          # satelitska
+#   ctx.providers.CartoDB.Voyager            # uravnotezena
+
+# ============= SQL za fallback BP koord =============
+conn_atoll = pyodbc.connect(
+    'Driver={SQL Server};'
+    'Server=BPW-DENALI;'
+    'Database=atoll_d96;'
+    'UID=beribaze;'
+    'PWD=beribaze'
+)
+
+
+def bp_koord(lokacija):
+    """Vrne (X, Y) v EPSG:3794, ali None ce ne najde."""
+    sites = pd.read_sql(
+        f"SELECT NAME, LONGITUDE, LATITUDE FROM atoll_d96.dbo.sites WHERE NAME='{lokacija}'",
+        conn_atoll
+    )
+    if sites.shape[0] == 0:
+        return None
+    return float(sites.iloc[0]['LONGITUDE']), float(sites.iloc[0]['LATITUDE'])
+
+
+def izracunaj_crop(tif_path, fallback_bp_coords):
+    """
+    Vrne (xmin, ymin, xmax, ymax) v EPSG:3794 za izrez.
+    Logika:
+      1. Bounds beremo direktno iz TIF (kolegov naredi_tif1 jih tightly croppa na izboljsavo).
+      2. Ce so bounds degenerirani (< 100m), fallback na BP center +/- MIN_RADIUS_M.
+      3. Po izbiri kvadratiziramo (SQUARE_CROP).
+      4. Dodamo BUFFER_M na vse strani.
+    """
+    with rasterio.open(tif_path) as src:
+        b = src.bounds
+        xmin, ymin, xmax, ymax = b.left, b.bottom, b.right, b.top
+
+    if (xmax - xmin) < 100 or (ymax - ymin) < 100:
+        if fallback_bp_coords:
+            cx, cy = fallback_bp_coords
+        else:
+            cx = (xmin + xmax) / 2
+            cy = (ymin + ymax) / 2
+        xmin = cx - MIN_RADIUS_M
+        xmax = cx + MIN_RADIUS_M
+        ymin = cy - MIN_RADIUS_M
+        ymax = cy + MIN_RADIUS_M
+
+    if SQUARE_CROP:
+        dx = xmax - xmin
+        dy = ymax - ymin
+        d = max(dx, dy) / 2
+        cx = (xmin + xmax) / 2
+        cy = (ymin + ymax) / 2
+        xmin, xmax = cx - d, cx + d
+        ymin, ymax = cy - d, cy + d
+
+    return xmin - BUFFER_M, ymin - BUFFER_M, xmax + BUFFER_M, ymax + BUFFER_M
+
+
+def narisi_eno(tif_path, shp_path, output_path, bp_coords):
+    xmin, ymin, xmax, ymax = izracunaj_crop(tif_path, bp_coords)
+    print(f"  bounds (EPSG:3794): x=[{xmin:.0f}, {xmax:.0f}], y=[{ymin:.0f}, {ymax:.0f}]")
+
+    fig, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.set_aspect('equal')
+
+    # 1. Basemap - contextily prenese OSM/OpenTopo tile-e in jih reprojicira v nas CRS
+    ctx.add_basemap(ax, crs="EPSG:3794", source=BASEMAP_PROVIDER)
+
+    # 2. Raster overlay (TIF z alpha kanalom iz transparent2)
+    with rasterio.open(tif_path) as src:
+        img = src.read()
+        b = src.bounds
+        ext = [b.left, b.right, b.bottom, b.top]
+    if img.shape[0] >= 3:
+        img = img.transpose(1, 2, 0)   # (bands, h, w) -> (h, w, bands)
+    else:
+        img = img[0]
+    ax.imshow(img, extent=ext, origin='upper', interpolation='nearest', zorder=2)
+
+    # 3. Naslovi (SHP) - rdece pike
+    if os.path.exists(shp_path):
+        points = gpd.read_file(shp_path)
+        if points.crs is None:
+            points = points.set_crs("EPSG:3794")
+        elif points.crs.to_string() != "EPSG:3794":
+            points = points.to_crs("EPSG:3794")
+        points.plot(ax=ax, color='red', markersize=15, edgecolor='black', linewidth=0.5, zorder=3)
+
+    # Cista slika, brez osi, brez naslova, brez legende
+    ax.set_axis_off()
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    plt.savefig(output_path, dpi=DPI, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+
+
+def main():
+    bp_coords = bp_koord(LOKACIJA)
+    if bp_coords:
+        print(f"BP {LOKACIJA} koord (EPSG:3794): {bp_coords}")
+    else:
+        print(f"OPOZORILO: BP {LOKACIJA} ni v atoll_d96.sites - fallback brez centra")
+
+    for teh in TEHNOLOGIJE:
+        tif_path = os.path.join(
+            SLIKE_DIR,
+            f"{LOKACIJA}_Izboljsava_Naslovi_best_outdoor_{teh}.tif"
+        )
+        shp_path = os.path.join(
+            SLIKE_DIR,
+            f"{LOKACIJA}_Izboljsava_Naslovi_best_outdoor_{teh}_naslovi.shp"
+        )
+        output_path = os.path.join(SLIKE_DIR, f"{LOKACIJA}_{teh}_pokrivanje.png")
+
+        if not os.path.exists(tif_path):
+            print(f"PRESKOK: ne najdem {tif_path}")
+            continue
+        print(f"Generiram: {output_path}")
+        narisi_eno(tif_path, shp_path, output_path, bp_coords)
+
+    print("Konec.")
+
+
+if __name__ == "__main__":
+    main()
