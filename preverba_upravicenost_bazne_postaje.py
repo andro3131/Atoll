@@ -574,9 +574,20 @@ def izracunaj_stevilke(mapa = '', lokacija = '', naredi_slike = False):
         stevec = stevec + 1
         temp_a = pd.concat([temp_a, temp])
 
+    # PNG generacija (vse + zoom variant za vsako tehnologijo) iz ze ustvarjenih TIF+SHP.
+    # Lazy import, da preverba ne pada ce PNG dependencies (contextily, pip-system-certs ...)
+    # niso na voljo. Failure tukaj ne sme ubiti pipelina - analiza Excel in TIF+SHP so ze varni.
+    if naredi_slike:
+        try:
+            import narisi_pokrivanje
+            narisi_pokrivanje.obdelaj_lokacijo(lokacija)
+        except Exception as e:
+            print(f"OPOZORILO: PNG generacija ni uspela za {lokacija}: {e}")
+            print(f"  TIF+SHP+analiza so OK. PNG-je lahko rocno re-generiras z: py -3.10 narisi_pokrivanje.py {lokacija}")
+
     stolpci_koncno = ['scenarij',	'celica',	'Izboljsava_Naslovi_best',	'Izboljsava_Prebivalci_best',	'Novi_Naslovi_best_indoor',	'Novi_Prebivalci_best_indoor'	,'Novi_Naslovi_best_outdoor',	'Novi_Prebivalci_best_outdoor',	'Izboljsava_Naslovi_best_indoor'	,'Izboljsava_Prebivalci_best_indoor'	,'Izboljsava_Naslovi_best_outdoor'	,'Izboljsava_Prebivalci_best_outdoor'	,'Naslovi_best_FWA potencial','Naslovi_best_FWA_izboljsava','Izboljsava_Naslovi_second',	'Izboljsava_Prebivalci_second'	,'Izboljsava_Naslovi_second_indoor'	,'Novi_Naslovi_second_indoor'	,'Novi_Prebivalci_second_indoor'	,'Novi_Naslovi_second_outdoor',	'Novi_Prebivalci_second_outdoor'	,'Izboljsava_Prebivalci_second_indoor',	'Izboljsava_Naslovi_second_outdoor',	'Izboljsava_Prebivalci_second_outdoor',	'Naslovi_second_FWA_redundanca','Naslovi_second_FWA_izboljsava']
-    temp_a[stolpci_koncno][temp_a['celica'] == 'Skupaj'].to_excel(mapa + lokacija  + "_analiza.xlsx", index = False)       
-    return 0    
+    temp_a[stolpci_koncno][temp_a['celica'] == 'Skupaj'].to_excel(mapa + lokacija  + "_analiza.xlsx", index = False)
+    return 0
 
 def brisi_izvzeto(vhodni_seznam, celice_brisi):
     
