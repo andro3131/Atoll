@@ -580,7 +580,7 @@ def izracunaj_stevilke(mapa = '', lokacija = '', naredi_slike = False):
     if naredi_slike:
         try:
             import narisi_pokrivanje
-            narisi_pokrivanje.obdelaj_lokacijo(lokacija)
+            narisi_pokrivanje.obdelaj_lokacijo(lokacija, slike_dir=mapa + "Slike\\")
         except Exception as e:
             print(f"OPOZORILO: PNG generacija ni uspela za {lokacija}: {e}")
             print(f"  TIF+SHP+analiza so OK. PNG-je lahko rocno re-generiras z: py -3.10 narisi_pokrivanje.py {lokacija}")

@@ -226,14 +226,16 @@ def narisi_eno(tif_path, shp_path, output_path, bounds):
     plt.close(fig)
 
 
-def preveri_lokacijo(lokacija):
+def preveri_lokacijo(lokacija, slike_dir=None):
     """
     Preveri, ce je za lokacijo na voljo izracun (Slike mapa + TIF/SHP fajli).
     Vrne tuple (status, dict_pari) kjer:
       status = 'ok' / 'manjka_mapa' / 'manjka_vse'
       dict_pari = {teh: (tif_path, shp_path)} za tehnologije, kjer obstaja TIF
+    slike_dir: ce podan, uporabi to pot; sicer izpeljemo iz POKRIVANJA_BASE_DIR (CLI mode).
     """
-    slike_dir = os.path.join(POKRIVANJA_BASE_DIR, lokacija, "Slike")
+    if slike_dir is None:
+        slike_dir = os.path.join(POKRIVANJA_BASE_DIR, lokacija, "Slike")
     if not os.path.isdir(slike_dir):
         return 'manjka_mapa', {}
 
@@ -249,11 +251,17 @@ def preveri_lokacijo(lokacija):
     return 'ok', pari
 
 
-def obdelaj_lokacijo(lokacija):
+def obdelaj_lokacijo(lokacija, slike_dir=None):
+    """
+    slike_dir: ce klican iz preverba_upravicenost_bazne_postaje.py kot library, naj se
+    poda dejanska pot (npr. mapa + 'Slike\\'). Brez parametra (CLI mode) izpeljemo iz
+    POKRIVANJA_BASE_DIR. Tako ena datoteka deluje za oba (planer01, planer02).
+    """
     print(f"\n========== {lokacija} ==========")
 
-    status, pari = preveri_lokacijo(lokacija)
-    slike_dir = os.path.join(POKRIVANJA_BASE_DIR, lokacija, "Slike")
+    if slike_dir is None:
+        slike_dir = os.path.join(POKRIVANJA_BASE_DIR, lokacija, "Slike")
+    status, pari = preveri_lokacijo(lokacija, slike_dir=slike_dir)
 
     if status == 'manjka_mapa':
         print(f"  NAPAKA: ne najdem mape {slike_dir}")
