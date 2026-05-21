@@ -44,6 +44,10 @@ FIGSIZE = (10, 10)
 OVERLAY_ALPHA = 0.6       # transparenca raster overlay-a (0=nevidno, 1=neprozorno)
 POINTS_ALPHA = 0.8        # transparenca rdecih pik naslovov
 
+EXPORT_PNG = True         # PNG = arhiv, ohrani polno kakovost
+EXPORT_JPG = True         # JPG = manjse datoteke za email
+JPG_QUALITY = 85          # 75 = vidni artefakti; 90 = blizu PNG velikosti; 85 = sweet spot
+
 # Zoom slika: koliko % najblizjih naslovov ohranimo. Per-tech.
 # LTE in NR imata pogosto zelo razlicno razprseno pokrivanje, zato locena nastavitev.
 PERCENTILE_ZOOM = {
@@ -222,7 +226,13 @@ def narisi_eno(tif_path, shp_path, output_path, bounds):
 
     ax.set_axis_off()
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
-    plt.savefig(output_path, dpi=DPI, bbox_inches='tight', pad_inches=0)
+
+    base, _ = os.path.splitext(output_path)
+    if EXPORT_PNG:
+        plt.savefig(base + ".png", dpi=DPI, bbox_inches='tight', pad_inches=0)
+    if EXPORT_JPG:
+        plt.savefig(base + ".jpg", dpi=DPI, bbox_inches='tight', pad_inches=0,
+                    pil_kwargs={"quality": JPG_QUALITY, "optimize": True})
     plt.close(fig)
 
 
